@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Taller5-AYGO</title>
+</head>
+<body>
+<form>
+    <label for="message">Mensaje: </label><br>
+    <input type="text" id="message" name="message" placeholder="Ingresa tu mensaje">
+    <br><br>
+    <input type="button" value="Submit" onclick="loadMessages()">
+</form>
+<hr>
+<div id="result" style="display: none;">
+    <table style="border: 1px solid black;">
+        <thead>
+        <tr>
+            <th>Mensaje</th>
+            <th>IP</th>
+            <th>Timestamp</th>
+        </tr>
+        </thead>
+        <tbody id="table"></tbody>
+    </table>
+</div>
+<script>
+    let loadMessages = () => {
+        let nameVar = document.getElementById("message").value;
+        fetch("https://dev-cz8pv8bm3tkehhil.us.auth0.com/oauth/token", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                grant_type: 'client_credentials',
+                client_id: 'H2U4ISQeVlHWJj69mlZf7se6hA7INBgg',
+                client_secret: 'gKEDWU3W60t7JRROTEm0O5D6tV8HxZDsanm3cNb7mOnNFMhFLhlKzPTtSIT1S6lu',
+                audience: 'http://localhost:3000'
+            })
+        }).then(res => res.json())
+            .then((res) => {
+                localStorage.setItem("access_token", res["access_token"]);
+            }).then(() => {
+            fetch("/message", {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem("access_token"),
+                },
+                body: nameVar,
+            }).then(res => res.json())
+                .then((res) => {
+                    let searchDiv = document.getElementById("table");
+                    buildLogTable(searchDiv, res);
+                    document.getElementById("result").setAttribute("style", "display: block");
+                })
+        })
+    };
+
+    let buildLogTable = (container, messages) => {
+        container.innerHTML = ""
+        for (const timestamp in messages) {
+            let row = document.createElement("tr");
+            let msg = document.createElement("td");
+            msg.innerText = messages[timestamp]["message"];
+            row.appendChild(msg);
+            let ip = document.createElement("td");
+            ip.innerText = messages[timestamp]["clientIp"];
+            row.appendChild(ip);
+            let msgDate = document.createElement("td");
+            msgDate.innerText = timestamp;
+            row.appendChild(msgDate);
+            container.appendChild(row);
+        }
+    };
+</script>
+</body>
+</html>

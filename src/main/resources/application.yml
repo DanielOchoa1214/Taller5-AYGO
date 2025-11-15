@@ -1,0 +1,17 @@
+debug: true
+server:
+  port: 3000
+
+spring:
+  application:
+    name: Taller5-AYGO
+
+okta:
+  oauth2:
+    # Replace with the domain of your Auth0 tenant.
+    issuer: https://dev-cz8pv8bm3tkehhil.us.auth0.com/
+    # Replace with the API Identifier for your Auth0 API.
+    audience: http://localhost:3000
+    client-id: 8lOJt7V10lBdLvp4ln2pllSkfxO1CZNl
+    client-secret: TgRfpSkDAKbkadPAMf0zRk8-DRKIn5rBnleo5vtoNlw3Fv5R816szYRvvxWGUSwU
+
