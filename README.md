@@ -1,4 +1,4 @@
-Taller5-AYGO — Minimal Message Feed with Zero Trust JWT Authorization
+# Taller5-AYGO — Minimal Message Feed with Zero Trust JWT Authorization
 
 Overview
 --------
@@ -22,11 +22,32 @@ Architecture
     - timestamp: server-side timestamp (LocalDateTime)
   - Storage: in-memory ConcurrentHashMap<String, Message> keyed by timestamp.toString() (keeps all messages for that run; the client can display last N messages)
 
-API / Data Flow
+Data Flow
 ---------------
-1. Client loads GET / (index.html) and shows a simple UI (message text field + send button).
-2. On send, the client issues a POST /message with the message body (plain string JSON in this repo's controller).
-3. Server receives the message, constructs a `Message` with server time and client IP, stores it in the in-memory map, and returns the full message map as JSON.
+
+Here is a high level design of how the proyect inforces zero trust: 
+<img width="1571" height="485" alt="ZeroTrustTaller5" src="https://github.com/user-attachments/assets/ba50337c-32d7-47d3-853d-22d0e3cf3287" />
+
+The app flow is something like this: 
+
+1. Client loads GET /app-login (login.html) and shows a simple UI (Login link).
+
+<img width="495" height="158" alt="image" src="https://github.com/user-attachments/assets/58616e84-b27a-4e94-abc0-6d82fab69c4b" />
+
+2. On login the user is redirected to the auth0 login page:
+
+<img width="435" height="607" alt="image" src="https://github.com/user-attachments/assets/c2ce20f3-a0eb-40cd-979e-3ce1bbdee01f" />
+
+(Note: Normally the user would be requested to login with his personal account but I was allready logged in by this point)
+
+3. On login the user is redirected to the main page:
+
+<img width="371" height="144" alt="image" src="https://github.com/user-attachments/assets/efd5d66a-11d2-4e56-9ca0-9265e090efc0" />
+
+4. Here the use can type any message. On send, the client issues a POST /message with the the Bearer token and the message body.
+6. Server receives the message, constructs a `Message` with server time and client IP, stores it in the in-memory map, and returns the full message map as JSON.
+
+<img width="407" height="252" alt="image" src="https://github.com/user-attachments/assets/3c8480aa-1ba7-4af7-b9ca-b6add11ae050" />
 
 Message JSON example
 
@@ -39,36 +60,17 @@ Message JSON example
 Response for POST /message: Map<String, Message>
 - The controller returns a JSON object mapping timestamp (string) -> Message. The client can sort or read the last 10 items to show the most recent.
 
-Security and Zero Trust design
+Via the browser the client automatically sets the token, but if we try to call the API via Postman without it we can see how all endpoints (except login) are rejected by default: 
+
+<img width="714" height="424" alt="image" src="https://github.com/user-attachments/assets/b3819903-409f-4514-9e8b-9e8412f7dc9c" />
+<img width="713" height="449" alt="image" src="https://github.com/user-attachments/assets/ba1f020d-48ba-44b3-8d6d-b60ef82f32ed" />
+<img width="699" height="633" alt="image" src="https://github.com/user-attachments/assets/2446c88b-b491-4d03-942c-8b7d008f56cb" />
+
+Conclusions
 ------------------------------
-This project was developed in two phases (as required by the workshop):
-1. No security — to focus on basic functionality and client/backend integration.
-2. Secure the backend using JWT-based authorization and Zero Trust principles.
 
-How Zero Trust is applied here
-- Never trust, always verify: Every protected API request (POST /message and other API endpoints) requires a validated JWT access token. The server does strict token validation.
-- Authentication & authorization per request: The server enforces authentication for every request using Spring Security. There is no implicit trust based on network location.
-- Minimal surface exposure: Only the public client endpoints are exposed without auth (/ and /app-login). The message API is protected.
-- Separation of concerns: Public client assets (static HTML/JS) are served separately from the protected API endpoints. OAuth2/OIDC client configuration (for interactive login) is separate from the resource-server (JWT validation).
-
-Implementation details
-- Spring Security configuration lives in `SecurityConfig`. It registers both OAuth2 client support (for browser-based login flows) and a resource server for JWT validation:
-  - .oauth2Login(...) enables interactive login flows for the web client.
-  - .oauth2ResourceServer().jwt() enables JWT validation for API requests.
-- The code expects these properties (set them in `application.properties` or environment):
-  - spring.security.oauth2.resourceserver.jwt.issuer-uri = <OIDC issuer URI>
-  - auth0.audience = <expected audience claim for tokens>
-  - okta.oauth2.client-id = <client id used for logout redirect> (or other provider property name as appropriate)
-
-Running & Testing
------------------
-
-```bash
-curl -X POST http://localhost:8080/message \
-  -H "Authorization: Bearer <ACCESS_TOKEN>" \
-  -H "Content-Type: text/plain" \
-  --data "Hello from curl"
-```
-
-If you call POST /message without a valid token you should receive a 401 unauthorized response (that demonstrates per-request authentication enforcement).
+We successfully applied Zero Trust by following their principles in the following ways: 
+- Authentication & authorization per request: The server enforces authentication for every request using Spring Security. All requests validate the JWT
+- Minimal surface exposure: Only the public client endpoints are exposed without auth (/app-login). The message API and main page are protected.
+- Never trust, always verify: Every protected API request (POST /message and GET / are protected) requires a validated JWT access token. The server does strict token validation.
 
